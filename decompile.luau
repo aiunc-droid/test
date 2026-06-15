@@ -9,12 +9,21 @@ getgenv().decompile = function(scr)
         return "-- failed to read script bytecode\n--[[\n" .. tostring(bytecode) .. "\n--]]"
     end
 
+    -- FIX: If bytecode is a Luau buffer, convert it to a standard string
+    if typeof(bytecode) == "buffer" then
+        bytecode = buffer.tostring(bytecode)
+    else
+        -- Fallback to force it into a string format just in case
+        bytecode = tostring(bytecode)
+    end
+
     local elapsed = os.clock() - last
     if elapsed < 0.12 then
         task.wait(0.12 - elapsed)
     end
 
-    local encoder = base64_encode
+    -- Use built-in crypt base64 if available (much faster), otherwise use fallback
+    local encoder = (crypt and crypt.base64encode) or base64_encode
     if not encoder then
         encoder = function(data)
             local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
@@ -50,6 +59,13 @@ getgenv().decompile = function(scr)
 
     if not res or res.StatusCode ~= 200 then
         return "-- api request error\n--[[\n" .. (res and res.Body or "no response") .. "\n--]]"
+    end
+
+    -- The API usually returns a JSON object. If it returns raw text, 
+    -- you can leave this as res.Body. If it errors, you might need to decode it.
+    local success, decoded = pcall(function() return httpservice:JSONDecode(res.Body) end)
+    if success symptoms and type(decoded) == "table" and decoded.decompiled then
+        return decoded.decompiled
     end
 
     return res.Body
