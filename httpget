@@ -1,1 +1,19 @@
-print("if u see this then httpget worked")
+
+print("Exploit Initalized")
+
+
+local CClosures = {}
+
+
+getgenv().isexecutorclosure(func)
+	assert(type(func) == "function", "invalid argument #1 to 'isexecutorclosure' (function expected, got " .. type(func) .. ") ", 2)
+    if debug.info(func, "s") ~= "[C]" then
+        return true
+    end
+    if CClosures[func] then
+        return true
+    end
+    return false
+end
+getgenv().checkclosure = getgenv().isexecutorclosure
+getgenv().isourclosure = getgenv().isexecutorclosure
